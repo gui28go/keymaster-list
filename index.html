@@ -1,0 +1,263 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Lista de Desejos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 250px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        .file-input-wrapper input[type="file"] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .btn-secondary {
+            background-color: #2ecc71;
+        }
+        .btn-secondary:hover {
+            background-color: #27ae60;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+        }
+        .card img {
+            max-width: 100%;
+            height: 150px;
+            object-fit: contain;
+            /* Esta propriedade ajuda a mesclar fundos claros com o fundo branco do cartão */
+            mix-blend-mode: multiply; 
+            margin-bottom: 15px;
+        }
+        .card h3 {
+            font-size: 18px;
+            margin: 0 0 10px 0;
+            text-transform: capitalize;
+        }
+        .card .price {
+            font-size: 20px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 0;
+        }
+        .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .remove-btn:hover {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+
+
+    <h1>Minha Lista de Desejos</h1>
+
+
+    <div class="controls">
+        <input type="text" id="itemInput" placeholder="Ex: liquidificador" onkeypress="handleKeyPress(event)">
+        <button onclick="adicionarItem()">Adicionar Item</button>
+        <button class="btn-secondary" onclick="exportarJSON()">Exportar JSON</button>
+        <div class="file-input-wrapper">
+            <button class="btn-secondary">Importar JSON</button>
+            <input type="file" id="importFile" accept=".json" onchange="importarJSON(event)">
+        </div>
+    </div>
+
+
+    <div class="grid" id="wishlistContainer"></div>
+
+
+    <script>
+        let wishlist = [];
+
+
+        // Função para simular a busca de dados do produto na internet
+        async function buscarDadosDoProduto(nome) {
+            // Em um cenário real, você faria um 'fetch' para uma API como Google Shopping ou Amazon
+            // Aqui simulamos o tempo de resposta da internet
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const precoGerado = (Math.random() * 400 + 50).toFixed(2).replace('.', ',');
+            
+            // Usamos um serviço gerador de imagens para garantir o fundo branco e o nome do item
+            const imagemUrl = `https://placehold.co/400x400/ffffff/333333?text=${encodeURIComponent(nome)}`;
+
+
+            return {
+                id: Date.now().toString(),
+                nome: nome,
+                preco: `R$ ${precoGerado}`,
+                imagem: imagemUrl
+            };
+        }
+
+
+        async function adicionarItem() {
+            const input = document.getElementById('itemInput');
+            const nomeItem = input.value.trim();
+
+
+            if (!nomeItem) return;
+
+
+            // Desativa o input enquanto busca
+            input.disabled = true;
+            input.value = 'Buscando...';
+
+
+            const produto = await buscarDadosDoProduto(nomeItem);
+            wishlist.push(produto);
+            
+            input.value = '';
+            input.disabled = false;
+            input.focus();
+            
+            renderizarLista();
+        }
+
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                adicionarItem();
+            }
+        }
+
+
+        function removerItem(id) {
+            wishlist = wishlist.filter(item => item.id !== id);
+            renderizarLista();
+        }
+
+
+        function renderizarLista() {
+            const container = document.getElementById('wishlistContainer');
+            container.innerHTML = '';
+
+
+            wishlist.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <button class="remove-btn" onclick="removerItem('${item.id}')">X</button>
+                    <img src="${item.imagem}" alt="${item.nome}">
+                    <h3>${item.nome}</h3>
+                    <p class="price">${item.preco}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+
+        function exportarJSON() {
+            if (wishlist.length === 0) {
+                alert("A lista está vazia!");
+                return;
+            }
+            const dataStr = JSON.stringify(wishlist, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'minha_lista_de_desejos.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+
+        function importarJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const dadosImportados = JSON.parse(e.target.result);
+                    if (Array.isArray(dadosImportados)) {
+                        wishlist = dadosImportados;
+                        renderizarLista();
+                    } else {
+                        alert("O formato do arquivo JSON é inválido para esta lista.");
+                    }
+                } catch (error) {
+                    alert("Erro ao ler o arquivo JSON.");
+                }
+            };
+            reader.readAsText(file);
+            // Reseta o input de arquivo
+            event.target.value = '';
+        }
+    </script>
+</body>
+</html>

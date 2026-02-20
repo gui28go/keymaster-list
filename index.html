@@ -1,0 +1,278 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wishlist Pro</title>
+    <style>
+        :root {
+            --primary: #007AFF;
+            --bg: #F5F5F7;
+            --card: #FFFFFF;
+            --text: #1D1D1F;
+        }
+
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+
+        .header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 40px; font-weight: 700; letter-spacing: -1px; margin-bottom: 10px; }
+
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            background: var(--card);
+            padding: 10px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 40px;
+        }
+
+
+        input {
+            flex: 1;
+            border: none;
+            padding: 15px;
+            font-size: 16px;
+            outline: none;
+            background: transparent;
+        }
+
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-json { background: #86868b; margin-top: 10px; }
+
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 25px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+
+        .card {
+            background: var(--card);
+            border-radius: 22px;
+            padding: 20px;
+            transition: all 0.3s cubic-bezier(0,0,0.5,1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+
+        .card:hover { transform: scale(1.03); box-shadow: 0 20px 40px rgba(0,0,0,0.08); }
+
+
+        .img-container {
+            width: 180px;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            mix-blend-mode: multiply; /* Remove fundos "quase brancos" */
+        }
+
+
+        .card img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+
+        .card h3 {
+            font-size: 14px;
+            font-weight: 500;
+            margin: 10px 0;
+            height: 40px;
+            overflow: hidden;
+            text-align: center;
+            color: #424245;
+        }
+
+
+        .card .price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff3b30;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0;
+            transition: 0.2s;
+        }
+
+
+        .card:hover .delete-btn { opacity: 1; }
+
+
+        .actions { margin-top: 50px; display: flex; gap: 15px; }
+    </style>
+</head>
+<body>
+
+
+    <div class="header">
+        <h1>Wishlist</h1>
+        <p>Busca automática de produtos reais</p>
+    </div>
+
+
+    <div class="search-container">
+        <input type="text" id="itemInput" placeholder="O que você quer comprar?">
+        <button onclick="buscarItem()">Adicionar</button>
+    </div>
+
+
+    <div class="grid" id="grid"></div>
+
+
+    <div class="actions">
+        <button class="btn-json" onclick="exportar()">Exportar JSON</button>
+        <button class="btn-json" onclick="document.getElementById('import').click()">Importar JSON</button>
+        <input type="file" id="import" hidden onchange="importar(event)">
+    </div>
+
+
+    <script>
+        let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+        render();
+
+
+        async function buscarItem() {
+            const query = document.getElementById('itemInput').value;
+            if(!query) return;
+
+
+            const btn = document.querySelector('.search-container button');
+            btn.innerText = "...";
+
+
+            try {
+                // Busca no Mercado Livre (API Real)
+                const res = await fetch(`https://api.mercadolivre.com/sites/MLB/search?q=${encodeURIComponent(query)}&limit=1`);
+                const data = await res.json();
+                
+                if(data.results.length > 0) {
+                    const item = data.results[0];
+                    // Pega imagem de alta resolução e força HTTPS
+                    const img = item.thumbnail.replace("-I.jpg", "-O.jpg").replace("http://", "https://");
+                    
+                    const novoItem = {
+                        id: item.id,
+                        nome: item.title,
+                        preco: item.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                        imagem: img
+                    };
+
+
+                    wishlist.push(novoItem);
+                    save();
+                    render();
+                } else {
+                    alert("Produto não encontrado.");
+                }
+            } catch (e) {
+                alert("Erro na busca.");
+            }
+
+
+            document.getElementById('itemInput').value = "";
+            btn.innerText = "Adicionar";
+        }
+
+
+        function render() {
+            const container = document.getElementById('grid');
+            container.innerHTML = wishlist.map((item, index) => `
+                <div class="card">
+                    <div class="delete-btn" onclick="remover(${index})">×</div>
+                    <div class="img-container">
+                        <img src="${item.imagem}" alt="${item.nome}">
+                    </div>
+                    <h3>${item.nome}</h3>
+                    <div class="price">${item.preco}</div>
+                </div>
+            `).join('');
+        }
+
+
+        function remover(index) {
+            wishlist.splice(index, 1);
+            save();
+            render();
+        }
+
+
+        function save() {
+            localStorage.setItem('wishlist', JSON.stringify(wishlist));
+        }
+
+
+        function exportar() {
+            const blob = new Blob([JSON.stringify(wishlist)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'wishlist.json';
+            a.click();
+        }
+
+
+        function importar(e) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                wishlist = JSON.parse(event.target.result);
+                save();
+                render();
+            };
+            reader.readAsText(e.target.files[0]);
+        }
+    </script>
+</body>
+</html>
